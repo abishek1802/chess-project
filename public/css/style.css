@@ -286,6 +286,20 @@ body::before {
 .player-avatar.white-player { background: #f0ede6; }
 .player-avatar.black-player { background: #2a2a32; border: 1px solid var(--border-light); }
 
+/* AI avatar — circuit-board green glow */
+.player-avatar.ai-player {
+  background: #0d1f0d;
+  border: 1px solid #2a5c2a;
+  box-shadow: 0 0 10px rgba(50,200,80,0.25), inset 0 0 8px rgba(50,200,80,0.1);
+  font-size: 22px;
+  animation: ai-pulse 2.5s ease-in-out infinite;
+}
+
+@keyframes ai-pulse {
+  0%, 100% { box-shadow: 0 0 10px rgba(50,200,80,0.25), inset 0 0 8px rgba(50,200,80,0.1); }
+  50%       { box-shadow: 0 0 18px rgba(50,200,80,0.5), inset 0 0 12px rgba(50,200,80,0.2); }
+}
+
 .player-info { flex: 1; min-width: 0; }
 .player-name { font-size: 14px; font-weight: 500; }
 .player-rating { font-size: 12px; color: var(--text-secondary); }
@@ -393,61 +407,67 @@ body::before {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 32px;
+  padding: 24px;
   background: var(--bg-primary);
+  min-width: 0;
+  overflow: hidden;
 }
 
 .board-container {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 8px;
+  align-items: flex-start;
+  gap: 0;
 }
 
 .board-wrapper {
   display: flex;
-  align-items: center;
-  gap: 8px;
+  align-items: stretch;
+  gap: 0;
 }
 
+/* Rank labels — each cell matches the square height exactly */
 .board-labels-v {
   display: flex;
   flex-direction: column;
-  gap: 0;
-  font-size: 12px;
+  font-size: 11px;
+  font-weight: 600;
   color: var(--text-muted);
   font-family: 'Playfair Display', serif;
   user-select: none;
+  width: 22px;
+  flex-shrink: 0;
 }
 
-.board-labels-h {
-  display: flex;
-  gap: 0;
-  font-size: 12px;
-  color: var(--text-muted);
-  font-family: 'Playfair Display', serif;
-  user-select: none;
-  padding-left: 28px;
-}
-
-.board-label-cell {
-  width: var(--sq-size);
-  height: var(--sq-size);
+.board-label-v {
+  height: var(--sq-size, 72px);
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-.board-label-v {
-  height: var(--sq-size);
-  width: 20px;
+/* File labels — each cell matches the square width exactly */
+.board-labels-h {
+  display: flex;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  font-family: 'Playfair Display', serif;
+  user-select: none;
+  margin-left: 22px; /* offset to align under board, not rank labels */
+  margin-top: 4px;
+}
+
+.board-label-cell {
+  width: var(--sq-size, 72px);
+  height: 20px;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
 #chess-board {
-  --sq-size: min(72px, 10vw, 10vh);
+  --sq-size: min(72px, calc((100vw - 340px) / 8), calc((100vh - 120px) / 8));
   display: grid;
   grid-template-columns: repeat(8, var(--sq-size));
   grid-template-rows: repeat(8, var(--sq-size));

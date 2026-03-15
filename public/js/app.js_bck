@@ -12,102 +12,6 @@ let lastMove = null;
 let isSpectator = false;
 let pendingPromotion = null;
 
-// ── SOUND ENGINE (Web Audio API — no files needed) ──
-const Audio = (() => {
-  let ctx = null;
-
-  function getCtx() {
-    if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)();
-    return ctx;
-  }
-
-  function play(type, opts = {}) {
-    try {
-      const c = getCtx();
-      const { freq = 440, freq2 = freq, duration = 0.18, volume = 0.35,
-              wave = 'sine', attack = 0.005, decay = 0.05, sustain = 0.6 } = opts;
-
-      const osc  = c.createOscillator();
-      const gain = c.createGain();
-      osc.connect(gain);
-      gain.connect(c.destination);
-
-      osc.type = wave;
-      osc.frequency.setValueAtTime(freq, c.currentTime);
-      if (freq2 !== freq) osc.frequency.linearRampToValueAtTime(freq2, c.currentTime + duration);
-
-      gain.gain.setValueAtTime(0, c.currentTime);
-      gain.gain.linearRampToValueAtTime(volume, c.currentTime + attack);
-      gain.gain.setValueAtTime(volume * sustain, c.currentTime + attack + decay);
-      gain.gain.exponentialRampToValueAtTime(0.0001, c.currentTime + duration);
-
-      osc.start(c.currentTime);
-      osc.stop(c.currentTime + duration + 0.02);
-    } catch(e) { /* AudioContext not available */ }
-  }
-
-  function chord(notes, opts = {}) {
-    notes.forEach((freq, i) =>
-      setTimeout(() => play('note', { ...opts, freq }), i * (opts.stagger || 0))
-    );
-  }
-
-  return {
-    // Soft wood-knock for normal move
-    move() {
-      play('move', { freq: 300, freq2: 220, duration: 0.12, volume: 0.28, wave: 'triangle', attack: 0.002, decay: 0.03 });
-    },
-    // Sharper click for captures
-    capture() {
-      play('cap1', { freq: 520, freq2: 180, duration: 0.14, volume: 0.38, wave: 'square', attack: 0.001, decay: 0.02, sustain: 0.2 });
-      setTimeout(() => play('cap2', { freq: 200, freq2: 140, duration: 0.1, volume: 0.22, wave: 'triangle', attack: 0.001, decay: 0.02 }), 30);
-    },
-    // Tension sting for check
-    check() {
-      play('chk', { freq: 880, freq2: 660, duration: 0.22, volume: 0.3, wave: 'sawtooth', attack: 0.005, decay: 0.04, sustain: 0.5 });
-    },
-    // Castle — two-beat thud
-    castle() {
-      play('c1', { freq: 260, freq2: 220, duration: 0.13, volume: 0.3, wave: 'triangle', attack: 0.002 });
-      setTimeout(() => play('c2', { freq: 200, freq2: 170, duration: 0.11, volume: 0.25, wave: 'triangle', attack: 0.002 }), 90);
-    },
-    // Promotion fanfare — ascending arpeggio
-    promote() {
-      [523, 659, 784, 1047].forEach((f, i) =>
-        setTimeout(() => play('p', { freq: f, duration: 0.18, volume: 0.28, wave: 'sine', attack: 0.005, decay: 0.04, sustain: 0.5 }), i * 90)
-      );
-    },
-    // Victory — major chord swell
-    win() {
-      const notes = [523, 659, 784, 1047];
-      notes.forEach((f, i) =>
-        setTimeout(() => play('w', { freq: f, duration: 0.55, volume: 0.22, wave: 'sine', attack: 0.02, decay: 0.08, sustain: 0.7 }), i * 110)
-      );
-      setTimeout(() => play('wHigh', { freq: 1568, duration: 0.7, volume: 0.18, wave: 'sine', attack: 0.03, decay: 0.1, sustain: 0.6 }), 480);
-    },
-    // Defeat — descending minor fall
-    lose() {
-      [494, 440, 392, 330].forEach((f, i) =>
-        setTimeout(() => play('l', { freq: f, duration: 0.4, volume: 0.2, wave: 'sine', attack: 0.01, decay: 0.06, sustain: 0.65 }), i * 130)
-      );
-    },
-    // Draw — neutral two-note resolution
-    draw() {
-      play('d1', { freq: 440, duration: 0.3, volume: 0.2, wave: 'sine', attack: 0.01, decay: 0.06 });
-      setTimeout(() => play('d2', { freq: 392, duration: 0.35, volume: 0.18, wave: 'sine', attack: 0.01 }), 180);
-    },
-    // Resign — dull low thud
-    resign() {
-      play('r1', { freq: 180, freq2: 120, duration: 0.35, volume: 0.28, wave: 'triangle', attack: 0.005, decay: 0.08, sustain: 0.4 });
-      setTimeout(() => play('r2', { freq: 130, freq2: 90, duration: 0.3, volume: 0.2, wave: 'triangle', attack: 0.002, decay: 0.06 }), 150);
-    },
-    // Illegal move — short buzzy error
-    illegal() {
-      play('ill', { freq: 160, freq2: 140, duration: 0.12, volume: 0.25, wave: 'sawtooth', attack: 0.001, decay: 0.02, sustain: 0.3 });
-    }
-  };
-})();
-
 // ── DOM HELPERS ──
 const $ = id => document.getElementById(id);
 const show = id => { const el = $(id); el && el.classList.add('active'); };
@@ -215,7 +119,6 @@ function onSquareClick(square) {
     }
 
     socket.emit('make_move', { roomId, move: { from: selectedSquare, to: square } });
-    // Sound played on game_state response (so AI moves also get sound)
     clearSelection();
     return;
   }
@@ -271,40 +174,11 @@ socket.on('valid_moves', ({ moves }) => {
 
 // ── GAME STATE UPDATE ──
 socket.on('game_state', (state) => {
-  const prevFen = lastMove ? null : null; // track for sound logic
-  const wasMove = state.lastMove && (
-    !lastMove ||
-    state.lastMove.from !== lastMove.from ||
-    state.lastMove.to   !== lastMove.to
-  );
-
   lastMove = state.lastMove || lastMove;
   renderBoard(state.fen);
   updateStatus(state);
   updateHistory(state.history);
   updateTurnIndicators(state.turn);
-
-  // ── Play sound for this state update ──
-  if (state.isCheckmate) {
-    // game_over handler plays win/lose — nothing here
-  } else if (state.isStalemate || state.isDraw) {
-    Audio.draw();
-  } else if (wasMove && state.lastMove) {
-    const m = state.lastMove;
-    const flags = m.flags || '';
-    if (flags.includes('k') || flags.includes('q')) {
-      Audio.castle();                           // castling
-    } else if (flags.includes('p')) {
-      Audio.promote();                          // promotion
-    } else if (flags.includes('c') || flags.includes('e')) {
-      Audio.capture();                          // capture / en-passant
-    } else {
-      Audio.move();                             // normal move
-    }
-    if (state.inCheck && !state.isCheckmate) {
-      setTimeout(() => Audio.check(), 80);      // layered check sting
-    }
-  }
 });
 
 function updateStatus(state) {
@@ -455,21 +329,11 @@ socket.on('room_created', ({ roomId: id, color }) => {
   const roomDisplay = $('room-id-display');
   if (roomDisplay) roomDisplay.textContent = id;
 
-  if (gameMode === 'ai') {
-    // Swap black player card to AI avatar
-    const avatar = $('black-player-avatar');
-    if (avatar) {
-      avatar.className = 'player-avatar ai-player';
-      avatar.textContent = '🤖';
-    }
-    const nameEl = $('black-player-name');
-    if (nameEl) nameEl.textContent = 'Computer';
-    const ratingEl = $('black-player-rating');
-    if (ratingEl) ratingEl.textContent = 'AI Opponent';
-    toast('Game started! You play White.', 'success');
-  } else if (gameMode === 'pvp') {
+  if (gameMode === 'pvp') {
     toast(`Room created! Share code: ${id}`, 'success', 5000);
     $('status-text').textContent = 'Waiting for opponent…';
+  } else {
+    toast('Game started! You play White.', 'success');
   }
 });
 
@@ -490,7 +354,6 @@ socket.on('game_start', () => {
 });
 
 socket.on('invalid_move', () => {
-  Audio.illegal();
   toast('Invalid move', 'error', 1500);
   clearSelection();
 });
@@ -506,20 +369,6 @@ socket.on('opponent_disconnected', () => {
 });
 
 socket.on('game_over', ({ reason, winner }) => {
-  if (reason === 'resignation') {
-    Audio.resign();
-  } else if (reason === 'checkmate') {
-    // Small delay so the last move sound plays first
-    setTimeout(() => {
-      if (!winner) return;
-      const iWon = (winner === 'white' && myColor === 'white') ||
-                   (winner === 'black' && myColor === 'black') ||
-                   gameMode === 'local'; // local: always play win sound
-      iWon ? Audio.win() : Audio.lose();
-    }, 200);
-  } else {
-    Audio.draw();
-  }
   showGameOver(winner, reason);
 });
 
@@ -563,10 +412,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Sidebar game actions
   $('btn-resign').addEventListener('click', () => {
     if (!roomId || isSpectator) return;
-    if (confirm('Resign this game?')) {
-      Audio.resign();
-      socket.emit('resign', { roomId });
-    }
+    if (confirm('Resign this game?')) socket.emit('resign', { roomId });
   });
 
   $('btn-offer-draw').addEventListener('click', () => {
