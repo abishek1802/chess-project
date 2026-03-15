@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Grandmaster — Chess</title>
+  <link rel="stylesheet" href="/css/style.css"/>
+</head>
+<body>
+
+<!-- ═══════════════════════════ HOME SCREEN ═══════════════════════════ -->
+<div id="home-screen" class="screen active">
+
+  <div class="logo">
+    <div class="logo-icon">♛</div>
+    <h1>Grandmaster</h1>
+    <p>Play. Learn. Conquer.</p>
+  </div>
+
+  <div class="menu-cards">
+    <div class="menu-card" id="btn-vs-ai">
+      <div class="card-icon">🤖</div>
+      <div class="card-title">Play vs Computer</div>
+      <div class="card-desc">Challenge the AI in a solo game. Practice openings, sharpen tactics.</div>
+    </div>
+
+    <div class="menu-card" id="btn-vs-player">
+      <div class="card-icon">⚔️</div>
+      <div class="card-title">Play vs Friend</div>
+      <div class="card-desc">Create a room and share the code. Real-time play via WebSockets.</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ═══════════════════════════ JOIN MODAL ═══════════════════════════ -->
+<div class="modal-overlay" id="join-modal">
+  <div class="modal">
+    <h2>Play vs Friend</h2>
+
+    <div class="input-group">
+      <label>Have a room code?</label>
+      <input type="text" id="room-code-input" placeholder="ENTER CODE" maxlength="8"/>
+    </div>
+
+    <div class="btn-row" style="margin-bottom: 12px">
+      <button class="btn btn-ghost" id="btn-cancel-join">Cancel</button>
+      <button class="btn btn-primary" id="btn-join-existing">Join Room</button>
+    </div>
+
+    <div style="text-align:center;color:var(--text-muted);font-size:13px;margin: 8px 0">— or —</div>
+
+    <button class="btn btn-primary" style="width:100%;margin-top:8px" id="btn-create-room">
+      Create New Room
+    </button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════ GAME SCREEN ═══════════════════════════ -->
+<div id="game-screen" class="screen">
+
+  <!-- SIDEBAR -->
+  <aside class="game-sidebar">
+
+    <div class="sidebar-logo">♛ Grandmaster</div>
+
+    <!-- Black player (top) -->
+    <div class="player-card" id="black-player-card">
+      <div class="player-avatar black-player">♚</div>
+      <div class="player-info">
+        <div class="player-name" id="black-player-name">Black</div>
+        <div class="player-rating">Ready</div>
+      </div>
+      <div class="turn-indicator" id="black-turn-dot" style="display:none"></div>
+    </div>
+
+    <!-- Captured pieces by white -->
+    <div class="captured-pieces" id="captured-by-white" title="Captured by White"></div>
+
+    <!-- Move history -->
+    <div class="move-history">
+      <div class="history-header">Move History</div>
+      <div class="history-moves" id="history-moves"></div>
+    </div>
+
+    <!-- Captured by black -->
+    <div class="captured-pieces" id="captured-by-black" title="Captured by Black"></div>
+
+    <!-- White player (bottom) -->
+    <div class="player-card" id="white-player-card">
+      <div class="player-avatar white-player">♔</div>
+      <div class="player-info">
+        <div class="player-name" id="white-player-name">White</div>
+        <div class="player-rating">Ready</div>
+      </div>
+      <div class="turn-indicator" id="white-turn-dot" style="display:block"></div>
+    </div>
+
+    <!-- Game actions -->
+    <div class="game-actions">
+      <button class="btn-action" id="btn-offer-draw">🤝 Offer Draw</button>
+      <button class="btn-action danger" id="btn-resign">🏳 Resign</button>
+      <button class="btn-action" id="btn-new-game">↩ New Game</button>
+    </div>
+
+  </aside>
+
+  <!-- MAIN BOARD AREA -->
+  <main class="game-main">
+    <div class="board-container">
+
+      <!-- Room ID chip -->
+      <div class="room-chip" id="btn-copy-room">
+        <span>Room:</span>
+        <span class="room-id-text" id="room-id-display">—</span>
+        <span class="copy-hint">click to copy</span>
+      </div>
+
+      <!-- Board with rank labels -->
+      <div class="board-wrapper">
+        <div class="board-labels-v" id="rank-labels">
+          <div class="board-label-v">8</div>
+          <div class="board-label-v">7</div>
+          <div class="board-label-v">6</div>
+          <div class="board-label-v">5</div>
+          <div class="board-label-v">4</div>
+          <div class="board-label-v">3</div>
+          <div class="board-label-v">2</div>
+          <div class="board-label-v">1</div>
+        </div>
+
+        <div id="chess-board"></div>
+      </div>
+
+      <!-- File labels -->
+      <div class="board-labels-h">
+        <div class="board-label-cell">a</div>
+        <div class="board-label-cell">b</div>
+        <div class="board-label-cell">c</div>
+        <div class="board-label-cell">d</div>
+        <div class="board-label-cell">e</div>
+        <div class="board-label-cell">f</div>
+        <div class="board-label-cell">g</div>
+        <div class="board-label-cell">h</div>
+      </div>
+
+      <!-- Status -->
+      <div class="status-bar">
+        <span id="status-text">Select a game mode to begin</span>
+      </div>
+
+    </div>
+  </main>
+
+</div>
+
+<!-- ═══════════════════════════ PROMOTION MODAL ═══════════════════════════ -->
+<div class="modal-overlay" id="promotion-modal">
+  <div class="modal">
+    <h2>Promote Pawn</h2>
+    <p style="color:var(--text-secondary);font-size:14px">Choose a piece for your pawn</p>
+    <div class="promotion-grid" id="promotion-grid"></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════ GAME OVER ═══════════════════════════ -->
+<div class="game-over-overlay" id="game-over-overlay">
+  <div class="game-over-card">
+    <div class="game-over-icon" id="game-over-icon">♟</div>
+    <div class="game-over-title" id="game-over-title">Game Over</div>
+    <div class="game-over-sub" id="game-over-sub"></div>
+    <div class="game-over-actions">
+      <button class="btn btn-ghost" id="btn-go-home">Home</button>
+      <button class="btn btn-primary" id="btn-play-again">Play Again</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════ TOAST ═══════════════════════════ -->
+<div class="toast" id="toast"></div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script src="/js/pieces.js"></script>
+<script src="/js/app.js"></script>
+</body>
+</html>
